@@ -1,0 +1,3 @@
+# Project exclude paths
+/examples/user-management/nextjs-user-management/next.config.js
+/packages/ai-commands/test/extensions.d.ts

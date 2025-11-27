@@ -23,17 +23,16 @@ services:
 
   studio:
     container_name: supabase-studio
-    image: supabase/studio:20241202-71e5240
+    image: supabase/studio:2025.01.13-sha-d104700
     restart: unless-stopped
-    ports:
-      - ${STUDIO_PORT:-3000}:3000
+    # No direct port exposure - access via Kong at port 8000 with basic-auth
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://localhost:3000/api/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
+          "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
         ]
       timeout: 10s
       interval: 5s
@@ -44,8 +43,14 @@ services:
       meta:
         condition: service_healthy
     environment:
+      # Binds to both IPv4 and IPv6
+      HOSTNAME: "::"
       STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
       DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
       DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
       SUPABASE_URL: http://kong:8000
@@ -53,19 +58,18 @@ services:
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       AUTH_JWT_SECRET: ${JWT_SECRET}
-      LOGFLARE_API_KEY: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      # LOGFLARE_API_KEY is deprecated
+      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
       LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
       LOGFLARE_URL: http://localhost:4000
       NEXT_PUBLIC_ENABLE_LOGS: false
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-      # Enable basic auth for Studio dashboard
-      STUDIO_DEFAULT_AUTH_ENABLED: true
-      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+      # Note: Studio auth is handled by Kong basic-auth, not these env vars
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.89.0
+    image: supabase/postgres-meta:v0.93.1
     restart: unless-stopped
     depends_on:
       db:
@@ -88,7 +92,7 @@ services:
       PG_META_DB_NAME: ${POSTGRES_DB}
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
-      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
   kong:
     container_name: supabase-kong
@@ -106,11 +110,13 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
 
   auth:

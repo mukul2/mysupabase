@@ -5,7 +5,6 @@ _transform: true
 ### Consumers / Users
 ###
 consumers:
-  - username: DASHBOARD
   - username: anon
     keyauth_credentials:
       - key: $SUPABASE_ANON_KEY
@@ -21,14 +20,6 @@ acls:
     group: anon
   - consumer: service_role
     group: admin
-
-###
-### Dashboard credentials
-###
-basicauth_credentials:
-  - consumer: DASHBOARD
-    username: $DASHBOARD_USERNAME
-    password: $DASHBOARD_PASSWORD
 
 ###
 ### API Routes
@@ -131,46 +122,14 @@ services:
             - admin
             - anon
 
-  ## Analytics routes
-  - name: analytics-v1
-    _comment: 'Analytics: /analytics/v1/* -> http://logflare:4000/*'
-    url: http://analytics:4000/
+  ## Edge Functions routes
+  - name: functions-v1
+    _comment: 'Edge Functions: /functions/v1/* -> http://functions:9000/*'
+    url: http://functions:9000/
     routes:
-      - name: analytics-v1-all
+      - name: functions-v1-all
         strip_path: true
         paths:
-          - /analytics/v1/
-
-  ## Secure Database routes
-  - name: meta
-    _comment: 'pg-meta: /pg/* -> http://pg-meta:8080/*'
-    url: http://meta:8080/
-    routes:
-      - name: meta-all
-        strip_path: true
-        paths:
-          - /pg/
-    plugins:
-      - name: key-auth
-        config:
-          hide_credentials: false
-      - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - admin
-
-  ## Protected Dashboard - catch all remaining routes
-  - name: dashboard
-    _comment: 'Studio: /* -> http://studio:3000/*'
-    url: http://studio:3000/
-    routes:
-      - name: dashboard-all
-        strip_path: true
-        paths:
-          - /
+          - /functions/v1/
     plugins:
       - name: cors
-      - name: basic-auth
-        config:
-          hide_credentials: true

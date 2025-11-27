@@ -124,6 +124,25 @@ ENABLE_PHONE_AUTOCONFIRM=true
 
 
 ############
+# Studio - Configuration for the Dashboard
+############
+
+STUDIO_PORT=3000
+STUDIO_DEFAULT_ORGANIZATION=Default Organization
+STUDIO_DEFAULT_PROJECT=Default Project
+
+# Replace with your VPS IP or domain
+SUPABASE_PUBLIC_URL=http://localhost:8000
+
+
+############
+# PgBouncer - Connection Pooling
+############
+
+PGBOUNCER_PORT=6543
+
+
+############
 # Functions - Configuration for Edge Functions
 ############
 

@@ -216,7 +216,7 @@ services:
 
   pgbouncer:
     container_name: supabase-pgbouncer
-    image: edoburu/pgbouncer:1.23.1-p2
+    image: edoburu/pgbouncer:v1.24.1-p1
     restart: unless-stopped
     ports:
       - ${PGBOUNCER_PORT:-6543}:5432

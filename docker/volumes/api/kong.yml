@@ -133,3 +133,4 @@ services:
           - /functions/v1/
     plugins:
       - name: cors
+

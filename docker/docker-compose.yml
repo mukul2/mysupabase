@@ -58,6 +58,10 @@ services:
       LOGFLARE_URL: http://localhost:4000
       NEXT_PUBLIC_ENABLE_LOGS: false
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+      # Enable basic auth for Studio dashboard
+      STUDIO_DEFAULT_AUTH_ENABLED: true
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
 
   meta:
     container_name: supabase-meta

@@ -43,6 +43,7 @@ const VAULT_ENC_KEY = randomString(32);
 const PG_META_CRYPTO_KEY = randomString(32);
 const LOGFLARE_PUBLIC = randomString(40);
 const LOGFLARE_PRIVATE = randomString(40);
+const DASHBOARD_PASSWORD = randomString(32);
 
 // JWT tokens expire in 2027
 const jwtPayloadAnon = { role: 'anon', iss: 'supabase', iat: 1641769200, exp: 1799535600 };
@@ -64,6 +65,8 @@ SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 SECRET_KEY_BASE=${SECRET_KEY_BASE}
 VAULT_ENC_KEY=${VAULT_ENC_KEY}
 PG_META_CRYPTO_KEY=${PG_META_CRYPTO_KEY}
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
 
 
 ############

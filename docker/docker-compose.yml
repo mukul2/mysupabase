@@ -137,8 +137,8 @@ services:
       API_EXTERNAL_URL: ${API_EXTERNAL_URL}
 
       GOTRUE_DB_DRIVER: postgres
-      # Connect via PgBouncer for connection pooling
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@pgbouncer:6543/${POSTGRES_DB}
+      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
 
       GOTRUE_SITE_URL: ${SITE_URL}
       GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
@@ -178,8 +178,8 @@ services:
       pgbouncer:
         condition: service_healthy
     environment:
-      # Connect via PgBouncer for connection pooling
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@pgbouncer:6543/${POSTGRES_DB}
+      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
@@ -204,8 +204,8 @@ services:
       SUPABASE_URL: http://kong:8000
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      # Connect via PgBouncer for connection pooling
-      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@pgbouncer:6543/${POSTGRES_DB}
+      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
     command:
       [
@@ -216,50 +216,32 @@ services:
 
   pgbouncer:
     container_name: supabase-pgbouncer
-    image: bitnami/pgbouncer:1.23.1
+    image: edoburu/pgbouncer:1.23.1-p2
     restart: unless-stopped
     ports:
-      - ${PGBOUNCER_PORT:-6543}:6543
+      - ${PGBOUNCER_PORT:-6543}:5432
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "6543"]
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
       interval: 10s
       timeout: 5s
       retries: 5
     environment:
-      POSTGRESQL_HOST: db
-      POSTGRESQL_PORT: 5432
-      POSTGRESQL_DATABASE: ${POSTGRES_DB}
-      POSTGRESQL_USERNAME: postgres
-      POSTGRESQL_PASSWORD: ${POSTGRES_PASSWORD}
-      PGBOUNCER_DATABASE: ${POSTGRES_DB}
-      PGBOUNCER_PORT: 6543
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       # Transaction mode: connections returned to pool after each transaction
-      # Best for web apps - allows maximum connection reuse
-      PGBOUNCER_POOL_MODE: transaction
+      POOL_MODE: transaction
       # Maximum client connections PgBouncer will accept
-      # With 4GB RAM, can safely handle 5000+ client connections
-      PGBOUNCER_MAX_CLIENT_CONN: 5000
-      # Actual PostgreSQL connections per pool (per user/database pair)
-      # PostgreSQL default max_connections is 100, reserve some for admin
-      PGBOUNCER_DEFAULT_POOL_SIZE: 25
-      # Minimum connections to keep open (faster response for first requests)
-      PGBOUNCER_MIN_POOL_SIZE: 5
-      # Extra connections allowed when pool is exhausted
-      PGBOUNCER_RESERVE_POOL_SIZE: 10
-      # Timeout for reserve pool connections (seconds)
-      PGBOUNCER_RESERVE_POOL_TIMEOUT: 3
-      # Max time a client can be idle before disconnection (seconds)
-      PGBOUNCER_CLIENT_IDLE_TIMEOUT: 300
-      # Authentication type
-      PGBOUNCER_AUTH_TYPE: md5
-      PGBOUNCER_IGNORE_STARTUP_PARAMETERS: extra_float_digits
-      # Add all Supabase users for authentication
-      PGBOUNCER_USERLIST_FILE: /bitnami/pgbouncer/conf/userlist.txt
-    volumes:
-      - ./volumes/pgbouncer:/bitnami/pgbouncer/conf:z
+      MAX_CLIENT_CONN: 5000
+      # Actual PostgreSQL connections per pool
+      DEFAULT_POOL_SIZE: 25
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 10
+      RESERVE_POOL_TIMEOUT: 3
+      # Auth settings
+      AUTH_TYPE: scram-sha-256
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
 
   db:
     container_name: supabase-db

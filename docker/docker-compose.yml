@@ -35,7 +35,7 @@ services:
       auth:
         condition: service_healthy
       rest:
-        condition: service_healthy
+        condition: service_started
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
@@ -110,12 +110,6 @@ services:
     container_name: supabase-rest
     image: postgrest/postgrest:v13.0.7
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "head -c 0 < /dev/tcp/localhost/3000 || exit 1"]
-      timeout: 5s
-      interval: 5s
-      retries: 3
-      start_period: 10s
     depends_on:
       db:
         condition: service_healthy

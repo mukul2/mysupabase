@@ -1,5 +1,6 @@
-# Optimized Supabase Setup for 4GB VPS (8 containers)
-# Services: db, pgbouncer, auth, rest, kong, functions, studio, meta
+# Lean Supabase Setup (5 containers)
+# Services: db, pgbouncer, auth, rest, kong, functions
+# NO Studio - use external tools like pgAdmin, DBeaver, or TablePlus
 #
 # Usage:
 #   Start:    docker compose up -d
@@ -7,92 +8,17 @@
 #   Destroy:  docker compose down -v --remove-orphans
 #   Logs:     docker compose logs -f
 #
-# RAM Usage (~1.1GB total):
+# RAM Usage (~500MB total):
 #   - PostgreSQL: ~300MB
 #   - PgBouncer: ~20MB
 #   - Kong: ~100MB
 #   - GoTrue (Auth): ~50MB
 #   - PostgREST: ~30MB
 #   - Edge Functions: ~100MB
-#   - Studio: ~400MB
-#   - Meta: ~50MB
 
 name: supabase
 
 services:
-
-  studio:
-    container_name: supabase-studio
-    image: supabase/studio:latest
-    restart: unless-stopped
-    # No direct port exposure - access via Kong at port 8000 with basic-auth
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
-        ]
-      timeout: 10s
-      interval: 5s
-      retries: 3
-    depends_on:
-      db:
-        condition: service_healthy
-      meta:
-        condition: service_healthy
-    environment:
-      # Binds to both IPv4 and IPv6
-      HOSTNAME: "::"
-      STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
-      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
-      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
-      SUPABASE_URL: http://kong:8000
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
-      AUTH_JWT_SECRET: ${JWT_SECRET}
-      # LOGFLARE_API_KEY is deprecated
-      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-      LOGFLARE_URL: http://localhost:4000
-      NEXT_PUBLIC_ENABLE_LOGS: false
-      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-      # Note: Studio auth is handled by Kong basic-auth, not these env vars
-
-  meta:
-    container_name: supabase-meta
-    image: supabase/postgres-meta:v0.93.1
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://localhost:8080/health').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
-        ]
-      timeout: 10s
-      interval: 5s
-      retries: 3
-    environment:
-      PG_META_PORT: 8080
-      PG_META_DB_HOST: db
-      PG_META_DB_PORT: 5432
-      PG_META_DB_NAME: ${POSTGRES_DB}
-      PG_META_DB_USER: supabase_admin
-      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
-      CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
   kong:
     container_name: supabase-kong
@@ -110,13 +36,11 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
-      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
 
   auth:
@@ -147,7 +71,7 @@ services:
       API_EXTERNAL_URL: ${API_EXTERNAL_URL}
 
       GOTRUE_DB_DRIVER: postgres
-      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      # Connect via PgBouncer for connection pooling
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
 
       GOTRUE_SITE_URL: ${SITE_URL}
@@ -188,7 +112,7 @@ services:
       pgbouncer:
         condition: service_healthy
     environment:
-      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      # Connect via PgBouncer for connection pooling
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
       PGRST_DB_ANON_ROLE: anon
@@ -214,7 +138,7 @@ services:
       SUPABASE_URL: http://kong:8000
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      # Connect via PgBouncer for connection pooling (pgbouncer internal port is 5432)
+      # Connect via PgBouncer for connection pooling
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB}
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
     command:

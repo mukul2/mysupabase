@@ -11,10 +11,6 @@ consumers:
   - username: service_role
     keyauth_credentials:
       - key: $SUPABASE_SERVICE_KEY
-  - username: DASHBOARD
-    basicauth_credentials:
-      - username: $DASHBOARD_USERNAME
-        password: $DASHBOARD_PASSWORD
 
 ###
 ### Access Control List
@@ -137,18 +133,3 @@ services:
           - /functions/v1/
     plugins:
       - name: cors
-
-  ## Protected Dashboard (MUST be last - catch-all route)
-  - name: dashboard
-    _comment: 'Studio: /* -> http://studio:3000/*'
-    url: http://studio:3000/
-    routes:
-      - name: dashboard-all
-        strip_path: true
-        paths:
-          - /
-    plugins:
-      - name: cors
-      - name: basic-auth
-        config:
-          hide_credentials: true

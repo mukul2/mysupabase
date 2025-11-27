@@ -23,7 +23,7 @@ services:
 
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2025.01.13-sha-d104700
+    image: supabase/studio:2025.01.06-sha-8f096b5
     restart: unless-stopped
     # No direct port exposure - access via Kong at port 8000 with basic-auth
     healthcheck:
